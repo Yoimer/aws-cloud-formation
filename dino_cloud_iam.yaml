@@ -26,3 +26,9 @@ Resources:
                   "logs:PutLogEvents"
                   ]
                 Resource: '*'
+Outputs:
+  SnsCloudWatchAlerts:
+    Description: "SNS for CloudWatch"
+    Value: !Ref "LambdaRole"
+    Export:
+      Name: !Sub "${AWS::StackName}-lambda-arn"
