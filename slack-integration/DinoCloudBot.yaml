@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing your function.
+Resources:
+  DinoCloudBot:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      CodeUri: .
+      Description: ''
+      MemorySize: 128
+      Timeout: 3
+      Role: 'arn:aws:iam::777970765756:role/basic_lamba_role_for_cloudformation'
+      Environment:
+        Variables:
+          slack_url: >-
+            https://hooks.slack.com/services/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
