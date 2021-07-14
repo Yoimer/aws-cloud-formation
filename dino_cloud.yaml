@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda function with cfn-response.
+Resources:
+  primer:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Role: arn:aws:iam::xxxxxxxxxxxx:role/basic_lamba_role_for_cloudformation
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          console.log('Loading function');
+          const https = require('https');
+          const url = require('url');
+          // update hook
+          const slack_url = "egrowcery-alerts-aaaaedizczdbezuyirs4mvqwca@lightcrest.slack.com"
+          const slack_req_opts = url.parse(slack_url);
+          slack_req_opts.method = 'POST';
+          slack_req_opts.headers = {
+              'Content-Type': 'application/json'
+          };
+          exports.handler = function(event, context) {
+              (event.Records || []).forEach(function(rec) {
+                  var req = https.request(slack_req_opts, function(res) {
+                      if (res.statusCode === 200) {
+                          context.succeed('posted to slack');
+                      } else {
+                          context.fail('status code: ' + res.statusCode);
+                      }
+                  });
+                  req.on('error', function(e) {
+                      console.log('problem with request: ' + e.message);
+                      context.fail(e.message);
+                  });
+                  if (rec.Sns.Subject.startsWith("ALARM:") || rec.Sns.Subject.startsWith("OK:")) {
+                      const cloudWatchMessage = JSON.parse(rec.Sns.Message)
+                      var triggeredDate = (cloudWatchMessage.StateChangeTime).substring(0, 10) + " " + (cloudWatchMessage.StateChangeTime).substring(11, 19)
+                      // edit Region
+                      var LinkToAlarm = "https://console.aws.amazon.com/cloudwatch/home?region=ap-southeast-2#alarmsV2:alarm/" +
+                          cloudWatchMessage.AlarmName + "?";
+                      var consoleLink = "<" + LinkToAlarm + "|Click here to open Alarm>";
+                      if (rec.Sns.Subject.startsWith("OK:")) {
+                          var color = "good";
+                          var type = "Alarm resolved";
+                      } else {
+                          var color = "danger"
+                          var type = "ALARM TRIGGERED";
+                      }
+                      req.write(JSON.stringify({
+                          "attachments": [{
+                              "fallback": "CloudWatch " + type + ": " + cloudWatchMessage.AlarmName + " in " + cloudWatchMessage.Region,
+                              "pretext": "PAPERCHEF",
+                              "color": color,
+                              "fields": [{
+                                      "title": "Alarm",
+                                      "value": cloudWatchMessage.AlarmName,
+                                      "short": true
+                                  },
+                                  {
+                                      "title": "Triggered Time",
+                                      "value": triggeredDate,
+                                      "short": true
+                                  },
+                                  {
+                                      "title": "Alarm Description",
+                                      "value": cloudWatchMessage.AlarmDescription,
+                                      "short": true
+                                  },
+                                  {
+                                      "title": "Region",
+                                      "value": cloudWatchMessage.Region,
+                                      "short": true
+                                  },
+                                  {
+                                      "title": "Service",
+                                      "value": cloudWatchMessage.Trigger.Namespace,
+                                      "short": true
+                                  },
+                                  {
+                                      "title": "AWS Console",
+                                      "value": consoleLink,
+                                      "short": true
+                                  }
+                              ]
+                          }]
+                      }))
+                  }
+                  // Otherwise, if not a CloudWatch event, send full alert subject and message
+                  else {
+                      req.write(JSON.stringify({
+                          text: "*Subject:*   " + rec.Sns.Subject + "\n *Message:* " + rec.Sns.Message
+                      }))
+                  }
+                  req.end();
+              });
+          };
+      Description: Invoke a function during stack creation.
+      TracingConfig:
+        Mode: Active
