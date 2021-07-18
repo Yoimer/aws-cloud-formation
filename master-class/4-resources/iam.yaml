@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lambda function with cfn-response.
+
+Parameters:
+    DefineRoleName:
+        Type: String
+        Default: BasicLambdaIAMRole
+    DefinePolicyName:
+        Type: String
+        Default: LogsPolicy
+
+Resources:
+    LambdaRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    - Effect: "Allow"
+                      Principal:
+                          Service:
+                              - "lambda.amazonaws.com"
+                      Action:
+                          - "sts:AssumeRole"
+            RoleName: !Ref DefineRoleName
+            Path: /
+            Policies:
+                - PolicyName: !Ref DefinePolicyName
+                  PolicyDocument:
+                      Version: "2012-10-17"
+                      Statement:
+                          - Effect: Allow
+                            Action:
+                                [
+                                    "logs:CreateLogGroup",
+                                    "logs:CreateLogStream",
+                                    "logs:PutLogEvents",
+                                ]
+                            Resource: "*"
+
+Outputs:
+    LambdaRoleOutput:
+        Description: Lambda role NodeJS example function
+        Value: !Ref "LambdaRole"
+        Export:
+          Name: !Sub "${AWS::StackName}-lambda-role-arn"
