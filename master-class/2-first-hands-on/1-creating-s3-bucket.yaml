@@ -1,6 +1,13 @@
+Parameters:
+    BucketNameList:
+        Description: Bucket List(zero indexed) including 3 strings values,
+        Type: CommaDelimitedList
+        Default: 'bucketvza1, bucketvza2, bucketvza3'
+
 Resources:
   MyS3Bucket:
     Type:  AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
-      BucketName: "random-name-bucket"
+      # BucketName: "random-name-bucket"
+      BucketName: !Select [1, !Ref BucketNameList]
